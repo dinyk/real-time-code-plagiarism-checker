@@ -1,0 +1,99 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Real-Time Code Plagiarism Checker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="topbar">
+      <div>
+        <p class="eyebrow">Online Judge Dashboard</p>
+        <h1>Real-Time Code Plagiarism Checker</h1>
+      </div>
+      <button id="sampleBtn" class="secondary-button" type="button">Load Sample</button>
+    </section>
+
+    <section class="workspace-grid">
+      <article class="panel editor-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Student Submission</h2>
+            <p>Treats every language as text: Python, Java, C++, JavaScript, and more.</p>
+          </div>
+          <label class="chunk-control">
+            Fragment size
+            <input id="chunkSize" type="number" min="20" max="200" value="80" />
+          </label>
+        </div>
+        <textarea id="studentCode" spellcheck="false" placeholder="Paste student submitted code here..."></textarea>
+        <button id="checkBtn" class="primary-button" type="button">Check Plagiarism</button>
+      </article>
+
+      <article class="panel result-panel">
+        <div class="panel-header compact">
+          <div>
+            <h2>Result Dashboard</h2>
+            <p>Green is original, red is suspicious.</p>
+          </div>
+        </div>
+        <div class="score-row">
+          <div class="score-card danger">
+            <span id="similarityScore">0%</span>
+            <small>Similarity</small>
+          </div>
+          <div class="score-card">
+            <span id="matchCount">0</span>
+            <small>Matches</small>
+          </div>
+          <div class="score-card">
+            <span id="referenceCount">0</span>
+            <small>References</small>
+          </div>
+        </div>
+        <pre id="highlightedCode" class="highlight-box"><span class="placeholder">Run a check to see highlighted code.</span></pre>
+      </article>
+    </section>
+
+    <section class="lower-grid">
+      <article class="panel">
+        <div class="panel-header compact">
+          <div>
+            <h2>Reference Code Storage</h2>
+            <p>Saved in SQLite and used as Rabin-Karp patterns.</p>
+          </div>
+        </div>
+        <form id="referenceForm" class="reference-form">
+          <div class="input-row">
+            <input id="filename" type="text" placeholder="reference_file.py" />
+            <select id="language">
+              <option>Python</option>
+              <option>Java</option>
+              <option>C++</option>
+              <option>JavaScript</option>
+              <option>Text</option>
+            </select>
+          </div>
+          <textarea id="referenceCode" spellcheck="false" placeholder="Paste a reference code snippet..."></textarea>
+          <button class="secondary-button" type="submit">Add Reference</button>
+        </form>
+        <div id="referenceList" class="reference-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header compact">
+          <div>
+            <h2>Matched Snippets</h2>
+            <p>Verified after rolling-hash matches to avoid hash collision errors.</p>
+          </div>
+        </div>
+        <div id="matchesList" class="matches-list empty-state">No matches yet.</div>
+      </article>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
