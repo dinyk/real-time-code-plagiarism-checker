@@ -1,99 +1,289 @@
-﻿<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Real-Time Code Plagiarism Checker</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <main class="app-shell">
-    <section class="topbar">
-      <div>
-        <p class="eyebrow">Online Judge Dashboard</p>
-        <h1>Real-Time Code Plagiarism Checker</h1>
-      </div>
-      <button id="sampleBtn" class="secondary-button" type="button">Load Sample</button>
-    </section>
+﻿:root {
+  --bg: #f4f7f6;
+  --panel: #ffffff;
+  --text: #17211d;
+  --muted: #60706a;
+  --line: #d8e2de;
+  --accent: #146c5f;
+  --accent-dark: #0d4d44;
+  --danger: #c93636;
+  --danger-bg: #ffe6e6;
+  --safe-bg: #e8f7ee;
+  --safe-text: #115a2b;
+  --shadow: 0 14px 32px rgba(18, 42, 35, 0.08);
+}
 
-    <section class="workspace-grid">
-      <article class="panel editor-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Student Submission</h2>
-            <p>Treats every language as text: Python, Java, C++, JavaScript, and more.</p>
-          </div>
-          <label class="chunk-control">
-            Fragment size
-            <input id="chunkSize" type="number" min="20" max="200" value="80" />
-          </label>
-        </div>
-        <textarea id="studentCode" spellcheck="false" placeholder="Paste student submitted code here..."></textarea>
-        <button id="checkBtn" class="primary-button" type="button">Check Plagiarism</button>
-      </article>
+* { box-sizing: border-box; }
 
-      <article class="panel result-panel">
-        <div class="panel-header compact">
-          <div>
-            <h2>Result Dashboard</h2>
-            <p>Green is original, red is suspicious.</p>
-          </div>
-        </div>
-        <div class="score-row">
-          <div class="score-card danger">
-            <span id="similarityScore">0%</span>
-            <small>Similarity</small>
-          </div>
-          <div class="score-card">
-            <span id="matchCount">0</span>
-            <small>Matches</small>
-          </div>
-          <div class="score-card">
-            <span id="referenceCount">0</span>
-            <small>References</small>
-          </div>
-        </div>
-        <pre id="highlightedCode" class="highlight-box"><span class="placeholder">Run a check to see highlighted code.</span></pre>
-      </article>
-    </section>
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 
-    <section class="lower-grid">
-      <article class="panel">
-        <div class="panel-header compact">
-          <div>
-            <h2>Reference Code Storage</h2>
-            <p>Saved in SQLite and used as Rabin-Karp patterns.</p>
-          </div>
-        </div>
-        <form id="referenceForm" class="reference-form">
-          <div class="input-row">
-            <input id="filename" type="text" placeholder="reference_file.py" />
-            <select id="language">
-              <option>Python</option>
-              <option>Java</option>
-              <option>C++</option>
-              <option>JavaScript</option>
-              <option>Text</option>
-            </select>
-          </div>
-          <textarea id="referenceCode" spellcheck="false" placeholder="Paste a reference code snippet..."></textarea>
-          <button class="secondary-button" type="submit">Add Reference</button>
-        </form>
-        <div id="referenceList" class="reference-list"></div>
-      </article>
+.app-shell {
+  width: min(1420px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
 
-      <article class="panel">
-        <div class="panel-header compact">
-          <div>
-            <h2>Matched Snippets</h2>
-            <p>Verified after rolling-hash matches to avoid hash collision errors.</p>
-          </div>
-        </div>
-        <div id="matchesList" class="matches-list empty-state">No matches yet.</div>
-      </article>
-    </section>
-  </main>
+.topbar,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
 
-  <script src="app.js"></script>
-</body>
-</html>
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+h1, h2, p { margin: 0; }
+
+h1 {
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  line-height: 1.08;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+p, small, label { color: var(--muted); }
+
+.workspace-grid,
+.lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.panel { padding: 18px; }
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.panel-header.compact { margin-bottom: 12px; }
+
+textarea,
+input,
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfc;
+  color: var(--text);
+  font: inherit;
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  outline: 2px solid rgba(20, 108, 95, 0.18);
+  border-color: var(--accent);
+}
+
+textarea {
+  min-height: 360px;
+  padding: 14px;
+  resize: vertical;
+  font-family: "Cascadia Code", Consolas, Monaco, monospace;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.reference-form textarea { min-height: 170px; }
+
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+input, select {
+  height: 42px;
+  padding: 0 12px;
+}
+
+.chunk-control {
+  display: grid;
+  gap: 6px;
+  min-width: 132px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary-button {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.primary-button:hover,
+.secondary-button:hover { transform: translateY(-1px); }
+
+.secondary-button {
+  background: #e6f0ed;
+  color: var(--accent-dark);
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.score-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdfc;
+}
+
+.score-card span {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.score-card.danger span { color: var(--danger); }
+
+.highlight-box {
+  min-height: 430px;
+  max-height: 620px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--safe-bg);
+  color: var(--safe-text);
+  font-family: "Cascadia Code", Consolas, Monaco, monospace;
+  line-height: 1.55;
+}
+
+.copied {
+  background: var(--danger-bg);
+  color: #8f1717;
+  border-bottom: 2px solid var(--danger);
+}
+
+.original {
+  background: var(--safe-bg);
+  color: var(--safe-text);
+}
+
+.placeholder,
+.empty-state { color: var(--muted); }
+
+.reference-list,
+.matches-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.reference-item,
+.match-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfdfc;
+}
+
+.item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  min-height: 24px;
+  padding: 0 10px;
+  background: #e6f0ed;
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.delete-button {
+  min-height: 30px;
+  padding: 0 10px;
+  background: #fff0f0;
+  color: var(--danger);
+}
+
+.match-item pre,
+.reference-item pre {
+  margin: 0;
+  max-height: 130px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: "Cascadia Code", Consolas, Monaco, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #263630;
+}
+
+@media (max-width: 980px) {
+  .workspace-grid,
+  .lower-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    width: min(100% - 20px, 1420px);
+    padding-top: 10px;
+  }
+
+  .topbar,
+  .panel-header,
+  .input-row {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .score-row { grid-template-columns: 1fr; }
+}

@@ -1,149 +1,99 @@
-﻿const API_URL = window.location.protocol.startsWith("http") ? window.location.origin : "http://127.0.0.1:5000";
-
-const studentCode = document.querySelector("#studentCode");
-const highlightedCode = document.querySelector("#highlightedCode");
-const similarityScore = document.querySelector("#similarityScore");
-const matchCount = document.querySelector("#matchCount");
-const referenceCount = document.querySelector("#referenceCount");
-const matchesList = document.querySelector("#matchesList");
-const referenceList = document.querySelector("#referenceList");
-const referenceForm = document.querySelector("#referenceForm");
-const chunkSize = document.querySelector("#chunkSize");
-
-const sampleSubmission = `def binary_search(arr, target):
-    low = 0
-    high = len(arr) - 1
-    while low <= high:
-        mid = (low + high) // 2
-        if arr[mid] == target:
-            return mid
-        if arr[mid] < target:
-            low = mid + 1
-        else:
-            high = mid - 1
-    return -1
-
-print(binary_search([1, 3, 5, 7, 9], 7))`;
-
-function escapeHtml(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-async function request(path, options = {}) {
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || "Request failed");
-  }
-  return data;
-}
-
-function renderHighlightedCode(segments) {
-  if (!segments || segments.length === 0) {
-    highlightedCode.innerHTML = '<span class="placeholder">No submitted code to highlight.</span>';
-    return;
-  }
-
-  highlightedCode.innerHTML = segments
-    .map((segment) => `<span class="${segment.copied ? "copied" : "original"}">${escapeHtml(segment.text)}</span>`)
-    .join("");
-}
-
-function renderMatches(matches) {
-  if (!matches || matches.length === 0) {
-    matchesList.className = "matches-list empty-state";
-    matchesList.textContent = "No copied fragments found.";
-    return;
-  }
-
-  matchesList.className = "matches-list";
-  matchesList.innerHTML = matches.slice(0, 25).map((match) => `
-    <div class="match-item">
-      <div class="item-heading">
-        <strong>${escapeHtml(match.reference_filename)}</strong>
-        <span class="badge">${escapeHtml(match.reference_language)}</span>
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Real-Time Code Plagiarism Checker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="topbar">
+      <div>
+        <p class="eyebrow">Online Judge Dashboard</p>
+        <h1>Real-Time Code Plagiarism Checker</h1>
       </div>
-      <small>Student chars ${match.submitted_start}-${match.submitted_end}, reference chars ${match.reference_start}-${match.reference_end}</small>
-      <pre>${escapeHtml(match.snippet)}</pre>
-    </div>
-  `).join("");
-}
+      <button id="sampleBtn" class="secondary-button" type="button">Load Sample</button>
+    </section>
 
-async function loadReferences() {
-  const references = await request("/api/references");
-  referenceCount.textContent = references.length;
-  referenceList.innerHTML = references.map((reference) => `
-    <div class="reference-item">
-      <div class="item-heading">
-        <div>
-          <strong>${escapeHtml(reference.filename)}</strong>
-          <span class="badge">${escapeHtml(reference.language)}</span>
+    <section class="workspace-grid">
+      <article class="panel editor-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Student Submission</h2>
+            <p>Treats every language as text: Python, Java, C++, JavaScript, and more.</p>
+          </div>
+          <label class="chunk-control">
+            Fragment size
+            <input id="chunkSize" type="number" min="20" max="200" value="80" />
+          </label>
         </div>
-        <button class="delete-button" data-id="${reference.id}" type="button">Delete</button>
-      </div>
-      <small>${reference.characters} characters</small>
-      <pre>${escapeHtml(reference.code)}</pre>
-    </div>
-  `).join("");
-}
+        <textarea id="studentCode" spellcheck="false" placeholder="Paste student submitted code here..."></textarea>
+        <button id="checkBtn" class="primary-button" type="button">Check Plagiarism</button>
+      </article>
 
-async function runCheck() {
-  try {
-    const result = await request("/api/check", {
-      method: "POST",
-      body: JSON.stringify({ student_code: studentCode.value, chunk_size: Number(chunkSize.value) }),
-    });
+      <article class="panel result-panel">
+        <div class="panel-header compact">
+          <div>
+            <h2>Result Dashboard</h2>
+            <p>Green is original, red is suspicious.</p>
+          </div>
+        </div>
+        <div class="score-row">
+          <div class="score-card danger">
+            <span id="similarityScore">0%</span>
+            <small>Similarity</small>
+          </div>
+          <div class="score-card">
+            <span id="matchCount">0</span>
+            <small>Matches</small>
+          </div>
+          <div class="score-card">
+            <span id="referenceCount">0</span>
+            <small>References</small>
+          </div>
+        </div>
+        <pre id="highlightedCode" class="highlight-box"><span class="placeholder">Run a check to see highlighted code.</span></pre>
+      </article>
+    </section>
 
-    similarityScore.textContent = `${result.similarity_percentage}%`;
-    matchCount.textContent = result.matches_found;
-    referenceCount.textContent = result.references_checked;
-    renderHighlightedCode(result.highlighted_segments);
-    renderMatches(result.matches);
-  } catch (error) {
-    alert(error.message);
-  }
-}
+    <section class="lower-grid">
+      <article class="panel">
+        <div class="panel-header compact">
+          <div>
+            <h2>Reference Code Storage</h2>
+            <p>Saved in SQLite and used as Rabin-Karp patterns.</p>
+          </div>
+        </div>
+        <form id="referenceForm" class="reference-form">
+          <div class="input-row">
+            <input id="filename" type="text" placeholder="reference_file.py" />
+            <select id="language">
+              <option>Python</option>
+              <option>Java</option>
+              <option>C++</option>
+              <option>JavaScript</option>
+              <option>Text</option>
+            </select>
+          </div>
+          <textarea id="referenceCode" spellcheck="false" placeholder="Paste a reference code snippet..."></textarea>
+          <button class="secondary-button" type="submit">Add Reference</button>
+        </form>
+        <div id="referenceList" class="reference-list"></div>
+      </article>
 
-document.querySelector("#checkBtn").addEventListener("click", runCheck);
-document.querySelector("#sampleBtn").addEventListener("click", () => {
-  studentCode.value = sampleSubmission;
-  runCheck();
-});
+      <article class="panel">
+        <div class="panel-header compact">
+          <div>
+            <h2>Matched Snippets</h2>
+            <p>Verified after rolling-hash matches to avoid hash collision errors.</p>
+          </div>
+        </div>
+        <div id="matchesList" class="matches-list empty-state">No matches yet.</div>
+      </article>
+    </section>
+  </main>
 
-referenceForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const filename = document.querySelector("#filename").value || "reference.txt";
-  const language = document.querySelector("#language").value;
-  const code = document.querySelector("#referenceCode").value;
-
-  try {
-    await request("/api/references", {
-      method: "POST",
-      body: JSON.stringify({ filename, language, code }),
-    });
-    referenceForm.reset();
-    await loadReferences();
-  } catch (error) {
-    alert(error.message);
-  }
-});
-
-referenceList.addEventListener("click", async (event) => {
-  const button = event.target.closest("button[data-id]");
-  if (!button) return;
-  await request(`/api/references/${button.dataset.id}`, { method: "DELETE" });
-  await loadReferences();
-});
-
-loadReferences().catch((error) => {
-  referenceList.textContent = `Could not load references: ${error.message}`;
-});
+  <script src="app.js"></script>
+</body>
+</html>
